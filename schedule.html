@@ -66,6 +66,13 @@
 
     .today-box strong { color: var(--rose); }
 
+    .subtitle-note {
+      margin: -0.5rem 0 1rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
     .hero {
       display: grid;
       grid-template-columns: 1.1fr 0.9fr;
@@ -482,8 +489,9 @@
       <div>
         <h1>2026 학사일정</h1>
       </div>
-      <div class="today-box" id="todayBox"></div>
+      <div class="today-box" id="todayBox">일정 불러오는 중...</div>
     </div>
+    <p class="subtitle-note" id="syncNote">Google 스프레드시트와 연동됩니다. 시트 수정 후 새로고침하면 반영됩니다.</p>
 
     <section class="hero">
       <article class="panel">
@@ -567,18 +575,10 @@
   </div>
 
   <script>
-    const RAW = [
-      { start: "2026-06-09", end: "2026-06-15", title: "기말고사", cat: "exam" },
-      { start: "2026-06-16", end: "2026-06-22", title: "보강기간", cat: "class" },
-      { start: "2026-06-22", end: "2026-07-03", title: "재입학 신청기간", cat: "enroll" },
-      { start: "2026-06-23", end: "2026-07-06", title: "하계 계절학기", cat: "class" },
-      { start: "2026-06-23", end: "2026-08-31", title: "미등록 휴학기간", cat: "enroll" },
-      { start: "2026-06-23", end: "2026-06-23", title: "하계방학", cat: "break" },
-      { start: "2026-06-25", end: "2026-06-30", title: "성적공시 및 정정", cat: "grade" },
-      { start: "2026-07-13", end: "2026-08-31", title: "휴학연기 신청기간", cat: "enroll" },
-      { start: "2026-07-13", end: "2026-07-17", title: "복학기간", cat: "enroll" },
-      { start: "2026-07-29", end: "2026-07-31", title: "예비수강 신청기간", cat: "class" }
-    ];
+    const SHEET_ID = "1X91WAh_sG2gT1S9fdY5GaCvFpkBlssQh";
+    const SHEET_QUERY = "tqx=out:json&headers=0&range=A2:C100";
+    let RAW = [];
+    let RANGE = { start: "2026-06-01", end: "2026-08-31" };
 
     const CATS = {
       all: "전체",
@@ -597,9 +597,103 @@
       break: "#059669"
     };
 
-    const RANGE = { start: "2026-06-01", end: "2026-08-31" };
-
     const state = { filter: "all", month: new Date(2026, 6, 1) };
+
+    function guessCategory(title) {
+      if (/고사|시험/.test(title)) return "exam";
+      if (/방학/.test(title)) return "break";
+      if (/성적/.test(title)) return "grade";
+      if (/수강|계절|보강/.test(title)) return "class";
+      if (/재입학|휴학|복학|등록/.test(title)) return "enroll";
+      return "class";
+    }
+
+    function normalizeDateCell(cell) {
+      if (!cell) return "";
+      if (cell.f) return cell.f;
+      if (typeof cell.v === "string") {
+        if (cell.v.indexOf("Date(") === 0) {
+          const m = cell.v.match(/Date\((\d+),(\d+),(\d+)\)/);
+          if (m) {
+            return m[1] + "-" + String(Number(m[2]) + 1).padStart(2, "0") + "-" + String(m[3]).padStart(2, "0");
+          }
+        }
+        return cell.v.trim();
+      }
+      return "";
+    }
+
+    function parseSheetResponse(response) {
+      const rows = (response && response.table && response.table.rows) || [];
+      return rows.map(function (row) {
+        const cells = row.c || [];
+        const start = normalizeDateCell(cells[0]);
+        const end = normalizeDateCell(cells[1]);
+        const title = cells[2] && cells[2].v ? String(cells[2].v).trim() : "";
+        if (!start || !end || !title) return null;
+        return {
+          start: start,
+          end: end,
+          title: title,
+          cat: guessCategory(title)
+        };
+      }).filter(Boolean);
+    }
+
+    function updateRange(events) {
+      if (!events.length) return;
+      let minStart = events[0].start;
+      let maxEnd = events[0].end;
+      events.forEach(function (ev) {
+        if (ev.start < minStart) minStart = ev.start;
+        if (ev.end > maxEnd) maxEnd = ev.end;
+      });
+      const minMonth = minStart.slice(0, 7) + "-01";
+      RANGE = { start: minMonth, end: maxEnd };
+    }
+
+    function loadSheetData() {
+      return new Promise(function (resolve, reject) {
+        const callbackName = "sheetCallback_" + Date.now();
+        const script = document.createElement("script");
+        const timeout = setTimeout(function () {
+          cleanup();
+          reject(new Error("timeout"));
+        }, 12000);
+
+        function cleanup() {
+          clearTimeout(timeout);
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[callbackName] = function (response) {
+          cleanup();
+          try {
+            const events = parseSheetResponse(response);
+            if (!events.length) throw new Error("empty");
+            resolve(events);
+          } catch (err) {
+            reject(err);
+          }
+        };
+
+        script.src =
+          "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?" +
+          SHEET_QUERY + "&callback=" + callbackName;
+        script.onerror = function () {
+          cleanup();
+          reject(new Error("network"));
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    function setSyncNote(text, isError) {
+      const el = document.getElementById("syncNote");
+      el.textContent = text;
+      el.style.color = isError ? "#dc2626" : "";
+    }
 
     function parse(s) {
       const p = String(s).split("-").map(Number);
@@ -824,6 +918,15 @@
       renderSummary(events);
     }
 
+    function initApp(events) {
+      RAW = events;
+      updateRange(events);
+      const today = todayStr();
+      const monthPart = today.slice(0, 7).split("-");
+      state.month = new Date(Number(monthPart[0]), Number(monthPart[1]) - 1, 1);
+      renderAll();
+    }
+
     document.getElementById("categoryFilter").addEventListener("click", function (e) {
       const btn = e.target.closest(".chip");
       if (!btn) return;
@@ -841,14 +944,28 @@
       renderAll();
     });
 
-    try {
-      renderAll();
-    } catch (err) {
-      document.body.insertAdjacentHTML("beforeend",
-        '<div style="position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#fee2e2;color:#991b1b;padding:0.75rem 1rem;border-radius:8px;font-size:0.9rem;">일정을 불러오는 중 오류가 발생했습니다. 새로고침해 주세요.</div>'
-      );
-      console.error(err);
-    }
+    loadSheetData()
+      .then(function (events) {
+        initApp(events);
+        setSyncNote("스프레드시트에서 " + events.length + "개 일정을 불러왔습니다. (" + new Date().toLocaleString("ko-KR") + ")", false);
+      })
+      .catch(function (err) {
+        console.error(err);
+        RAW = [
+          { start: "2026-06-09", end: "2026-06-15", title: "기말고사", cat: "exam" },
+          { start: "2026-06-16", end: "2026-06-22", title: "보강기간", cat: "class" },
+          { start: "2026-06-22", end: "2026-07-03", title: "재입학 신청기간", cat: "enroll" },
+          { start: "2026-06-23", end: "2026-07-06", title: "하계 계절학기", cat: "class" },
+          { start: "2026-06-23", end: "2026-08-31", title: "미등록 휴학기간", cat: "enroll" },
+          { start: "2026-06-23", end: "2026-06-23", title: "하계방학", cat: "break" },
+          { start: "2026-06-25", end: "2026-06-30", title: "성적공시 및 정정", cat: "grade" },
+          { start: "2026-07-13", end: "2026-08-31", title: "휴학연기 신청기간", cat: "enroll" },
+          { start: "2026-07-13", end: "2026-07-17", title: "복학기간", cat: "enroll" },
+          { start: "2026-07-29", end: "2026-08-15", title: "예비수강 신청기간", cat: "class" }
+        ];
+        initApp(RAW);
+        setSyncNote("스프레드시트 연결에 실패해 저장된 일정으로 표시합니다. 새로고침해 주세요.", true);
+      });
   </script>
 </body>
 </html>
