@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>윤인경 교수 — 2.5D 이력서</title>
+  <script>
+    (function () {
+      var saved = localStorage.getItem("theme");
+      var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", saved || (prefersDark ? "dark" : "light"));
+    })();
+  </script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root,
+    [data-theme="light"] {
+      --color-bg: #eef2f7;
+      --color-bg-deep: #d9e2ef;
+      --color-surface: #ffffff;
+      --color-surface-soft: #f8fafc;
+      --color-text: #172033;
+      --color-text-muted: #64748b;
+      --color-primary: #15345e;
+      --color-primary-soft: #2f5f95;
+      --color-accent: #c9a227;
+      --color-accent-soft: #f4e7b3;
+      --color-border: #d8e0eb;
+      --color-card-front: #ffffff;
+      --color-card-back: #17345e;
+      --color-card-back-text: #f8fafc;
+      --color-card-back-muted: #cbd5e1;
+      --shadow-soft: 0 24px 70px rgba(21, 52, 94, 0.18);
+      --shadow-card: 0 35px 80px rgba(21, 52, 94, 0.28);
+      --radius-lg: 28px;
+      --radius-md: 18px;
+      --max-width: 1080px;
+      --scroll-progress: 0;
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #07111f;
+      --color-bg-deep: #0f1b2d;
+      --color-surface: #111c2e;
+      --color-surface-soft: #18263a;
+      --color-text: #e5edf7;
+      --color-text-muted: #9fb0c5;
+      --color-primary: #9cc8f3;
+      --color-primary-soft: #6fa8dc;
+      --color-accent: #f1cf5b;
+      --color-accent-soft: rgba(241, 207, 91, 0.18);
+      --color-border: #2b3a50;
+      --color-card-front: #162235;
+      --color-card-back: #07111f;
+      --color-card-back-text: #f8fafc;
+      --color-card-back-muted: #b7c4d6;
+      --shadow-soft: 0 24px 70px rgba(0, 0, 0, 0.38);
+      --shadow-card: 0 35px 80px rgba(0, 0, 0, 0.52);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      color: var(--color-text);
+      line-height: 1.7;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(201, 162, 39, 0.18), transparent 28rem),
+        radial-gradient(circle at 82% 8%, rgba(47, 95, 149, 0.18), transparent 30rem),
+        linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-deep) 42%, var(--color-bg) 100%);
+      transition: background-color 0.3s ease, color 0.3s ease;
+      overflow-x: hidden;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.42);
+      color: #ffffff;
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .theme-toggle:hover {
+      transform: translateY(-2px);
+      background: rgba(15, 23, 42, 0.62);
+    }
+
+    .theme-toggle:focus-visible {
+      outline: 3px solid var(--color-accent);
+      outline-offset: 3px;
+    }
+
+    .scroll-stage {
+      min-height: 320vh;
+      position: relative;
+    }
+
+    .card-sticky {
+      position: sticky;
+      top: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 6rem 1.25rem 3rem;
+      perspective: 1600px;
+    }
+
+    .scene-copy {
+      position: absolute;
+      top: 7rem;
+      left: 50%;
+      width: min(30rem, calc(100vw - 2.5rem));
+      color: var(--color-text);
+      text-align: center;
+      opacity: calc(1 - min(var(--scroll-progress) * 2.4, 1));
+      transform: translateX(-50%) translateY(calc(var(--scroll-progress) * -28px));
+      transition: color 0.3s ease;
+      pointer-events: none;
+    }
+
+    .detail-heading .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+      color: var(--color-accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .scene-copy h1 {
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      line-height: 1.15;
+      letter-spacing: -0.04em;
+      color: var(--color-primary);
+    }
+
+    .business-card-wrap {
+      width: min(78vw, 760px);
+      aspect-ratio: 1.78 / 1;
+      transform-style: preserve-3d;
+      transform:
+        translateY(calc(var(--scroll-progress) * -8vh))
+        scale(calc(0.92 + min(max((var(--scroll-progress) - 0.55) * 1.4, 0), 0.44)))
+        rotateX(calc(var(--scroll-progress) * -6deg))
+        rotateZ(0deg);
+      transition: filter 0.2s ease;
+      filter: drop-shadow(var(--shadow-card));
+    }
+
+    .business-card {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transform: rotateY(calc(var(--scroll-progress) * -180deg));
+      transition: transform 0.08s linear;
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      padding: clamp(1.45rem, 4vw, 3rem);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: var(--radius-lg);
+      backface-visibility: hidden;
+      transform-style: preserve-3d;
+    }
+
+    .card-face::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.12) 42%, transparent 44%),
+        radial-gradient(circle at 18% 18%, rgba(201, 162, 39, 0.2), transparent 18rem);
+    }
+
+    .card-face::after {
+      content: "";
+      position: absolute;
+      right: -12%;
+      bottom: -24%;
+      z-index: -1;
+      width: 48%;
+      aspect-ratio: 1;
+      border: 1px solid rgba(201, 162, 39, 0.35);
+      border-radius: 999px;
+    }
+
+    .card-front {
+      background: var(--color-card-front);
+      color: var(--color-text);
+      border-top: 2px solid var(--color-primary-soft);
+    }
+
+    .card-front::before,
+    .card-front::after {
+      content: none;
+      display: none;
+    }
+
+    .card-back {
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 40%),
+        var(--color-card-back);
+      color: var(--color-card-back-text);
+      transform: rotateY(180deg);
+    }
+
+    .card-front .card-kicker,
+    .card-back .card-kicker {
+      color: var(--color-accent);
+      font-size: clamp(0.72rem, 1.5vw, 0.9rem);
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .card-name {
+      margin-top: 0.75rem;
+      font-size: clamp(2rem, 6vw, 4.7rem);
+      line-height: 0.98;
+      letter-spacing: -0.08em;
+      color: var(--color-primary);
+    }
+
+    .card-back .card-name {
+      color: var(--color-card-back-text);
+      font-size: clamp(1.7rem, 4.4vw, 3.6rem);
+    }
+
+    .card-title {
+      margin-top: 1rem;
+      max-width: 32rem;
+      color: var(--color-text-muted);
+      font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+    }
+
+    .card-back .card-title,
+    .card-back li,
+    .card-back p {
+      color: var(--color-card-back-muted);
+    }
+
+    .card-meta,
+    .card-back-grid {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .card-meta {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: 1.2rem;
+    }
+
+    .meta-item {
+      padding-top: 0.7rem;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .meta-label {
+      display: block;
+      color: var(--color-text-muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .meta-value {
+      display: block;
+      margin-top: 0.15rem;
+      color: var(--color-text);
+      font-weight: 800;
+    }
+
+    .card-back-grid {
+      grid-template-columns: 1fr 1fr;
+      margin-top: 1rem;
+    }
+
+    .card-back-list {
+      list-style: none;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .card-back-list li::before {
+      content: "";
+      display: inline-block;
+      width: 0.45rem;
+      height: 0.45rem;
+      margin-right: 0.5rem;
+      border-radius: 999px;
+      background: var(--color-accent);
+      vertical-align: middle;
+    }
+
+    .scroll-hint {
+      display: none;
+    }
+
+    .resume-detail {
+      max-width: var(--max-width);
+      margin: -18vh auto 0;
+      padding: 0 1.25rem 5rem;
+      position: relative;
+      z-index: 5;
+      opacity: calc(min(max((var(--scroll-progress) - 0.74) * 5, 0), 1));
+      transform: translateY(calc((1 - min(max((var(--scroll-progress) - 0.74) * 5, 0), 1)) * 56px));
+    }
+
+    .detail-shell {
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(18px);
+    }
+
+    .detail-heading {
+      padding: clamp(2rem, 5vw, 4rem);
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--color-primary-soft) 14%, transparent), transparent),
+        var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .detail-heading h2 {
+      font-size: clamp(1.9rem, 4vw, 3.2rem);
+      line-height: 1.15;
+      letter-spacing: -0.05em;
+      color: var(--color-primary);
+    }
+
+    .detail-heading p {
+      margin-top: 1rem;
+      max-width: 46rem;
+      color: var(--color-text-muted);
+      font-size: 1.05rem;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      padding: clamp(1rem, 3vw, 2rem);
+      background: var(--color-surface-soft);
+    }
+
+    .resume-section {
+      min-height: 100%;
+      padding: clamp(1.25rem, 3vw, 1.8rem);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+    }
+
+    .resume-section.wide {
+      grid-column: 1 / -1;
+    }
+
+    .resume-section h3 {
+      display: inline-block;
+      margin-bottom: 1rem;
+      padding-bottom: 0.45rem;
+      border-bottom: 2px solid var(--color-accent);
+      color: var(--color-primary);
+      font-size: 1.08rem;
+    }
+
+    .resume-section p {
+      color: var(--color-text-muted);
+    }
+
+    .resume-section ul {
+      list-style: none;
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .resume-section li {
+      position: relative;
+      padding-left: 1.15rem;
+      color: var(--color-text);
+    }
+
+    .resume-section li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.72em;
+      width: 0.42rem;
+      height: 0.42rem;
+      border-radius: 999px;
+      background: var(--color-accent);
+    }
+
+    footer {
+      padding: 2rem 1.25rem 3rem;
+      color: var(--color-text-muted);
+      text-align: center;
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 760px) {
+      .theme-toggle {
+        top: 0.75rem;
+        right: 0.75rem;
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+      }
+
+      .card-sticky {
+        padding-top: 5.5rem;
+      }
+
+      .scene-copy {
+        top: 5.5rem;
+      }
+
+      .business-card-wrap {
+        width: min(92vw, 560px);
+        transform:
+          translateY(calc(var(--scroll-progress) * -6vh))
+          scale(calc(0.9 + min(max((var(--scroll-progress) - 0.55) * 1.1, 0), 0.32)))
+          rotateX(calc(var(--scroll-progress) * -5deg))
+          rotateZ(0deg);
+      }
+
+      .card-face {
+        padding: 1.2rem;
+        border-radius: 22px;
+      }
+
+      .card-meta,
+      .card-back-grid,
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .card-title,
+      .card-back-list,
+      .card-back p {
+        font-size: 0.86rem;
+      }
+
+      .resume-detail {
+        margin-top: -10vh;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <button type="button" class="theme-toggle" id="themeToggle" aria-label="다크 모드로 전환">
+    <span id="themeLabel">다크 모드</span>
+  </button>
+
+  <section class="scroll-stage" id="scrollStage" aria-label="2.5D 명함형 이력서">
+    <div class="card-sticky">
+      <div class="scene-copy">
+        <h1>윤인경 교수 프로필</h1>
+      </div>
+
+      <div class="business-card-wrap" aria-hidden="true">
+        <div class="business-card" id="businessCard">
+          <article class="card-face card-front">
+            <div>
+              <span class="card-kicker">Gachon University</span>
+              <h2 class="card-name">윤인경</h2>
+              <p class="card-title">가천대학교 경영대학 회계세무학과 조교수</p>
+            </div>
+
+            <div class="card-meta">
+              <div class="meta-item">
+                <span class="meta-label">Name</span>
+                <span class="meta-value">Inkyung Yoon</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Major</span>
+                <span class="meta-value">Accounting</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Office</span>
+                <span class="meta-value">가천관 810호</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card-face card-back">
+            <div>
+              <span class="card-kicker">Resume Summary</span>
+              <h2 class="card-name">회계·세무·감사 연구</h2>
+              <p class="card-title">
+                공인회계사 및 공공투자 연구 경력을 바탕으로 회계와 감사 분야의
+                학술 연구, 교육, 실무 자문을 수행합니다.
+              </p>
+            </div>
+
+            <div class="card-back-grid">
+              <ul class="card-back-list">
+                <li>연세대학교 회계학 박사</li>
+                <li>딜로이트안진 Senior CPA</li>
+                <li>KDI 공공투자관리센터 전문연구원</li>
+              </ul>
+              <ul class="card-back-list">
+                <li>전화 031-750-5537</li>
+                <li>한국회계학회 이사</li>
+                <li>IFRS 중급회계 저서</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="resume-detail" id="resumeDetail">
+    <div class="detail-shell">
+      <header class="detail-heading">
+        <span class="eyebrow">Detailed Resume</span>
+        <h2>윤인경 교수 이력서</h2>
+        <p>
+          윤인경 교수는 가천대학교 경영대학 회계세무학과에서 회계를 전공하며
+          강의와 연구를 수행하고 있습니다. 연세대학교에서 경영학 학사와 회계학
+          석·박사 학위를 취득했으며, 공인회계사 및 연구원 경력을 바탕으로
+          회계·세무·감사 분야의 학술 연구와 실무 자문을 병행하고 있습니다.
+        </p>
+      </header>
+
+      <div class="detail-grid">
+        <section class="resume-section">
+          <h3>연락처</h3>
+          <ul>
+            <li>소속: 가천대학교 경영대학 회계세무학과</li>
+            <li>전화: 031-750-5537</li>
+            <li>연구실: 가천관 810호</li>
+          </ul>
+        </section>
+
+        <section class="resume-section">
+          <h3>학력</h3>
+          <ul>
+            <li>연세대학교 경영대학 회계학 박사</li>
+            <li>연세대학교 경영대학 회계학 석사</li>
+            <li>연세대학교 경영대학 경영학 학사</li>
+          </ul>
+        </section>
+
+        <section class="resume-section">
+          <h3>경력</h3>
+          <ul>
+            <li>가천대학교 경영대학 회계세무학과 조교수 (현재)</li>
+            <li>딜로이트안진 회계법인 감사본부 Senior CPA</li>
+            <li>KDI 공공투자관리센터 전문연구원</li>
+          </ul>
+        </section>
+
+        <section class="resume-section">
+          <h3>학회 활동</h3>
+          <ul>
+            <li>한국회계학회 이사</li>
+            <li>한국윤리경영학회 이사</li>
+          </ul>
+        </section>
+
+        <section class="resume-section">
+          <h3>연구 분야</h3>
+          <ul>
+            <li>회계</li>
+            <li>세무</li>
+            <li>감사</li>
+            <li>IFRS 회계</li>
+          </ul>
+        </section>
+
+        <section class="resume-section">
+          <h3>주요 저서</h3>
+          <ul>
+            <li>ALL IN ONE: IFRS 중급회계</li>
+          </ul>
+        </section>
+
+        <section class="resume-section wide">
+          <h3>주요 연구 실적</h3>
+          <ul>
+            <li>Business Horizons</li>
+            <li>Emerging Markets Finance and Trade</li>
+            <li>Global Business and Finance Review</li>
+            <li>Investment Management and Financial Innovations</li>
+            <li>회계학연구</li>
+            <li>경영학연구</li>
+            <li>최근 연구: 주기적 감사인 지정기업과 자유수임 기업의 감사품질 및 지정기간 종료의 효과 (회계·세무와 감사 연구, 2025)</li>
+          </ul>
+        </section>
+
+        <section class="resume-section wide">
+          <h3>연구·자문 경력</h3>
+          <ul>
+            <li>금융감독원 연구용역</li>
+            <li>신한금융그룹 연구용역</li>
+            <li>주식회사 KT 연구용역</li>
+            <li>민간투자사업 자금 재조달 및 사업 재구조화</li>
+            <li>민간투자사업 실시협약 검토 및 분쟁조정</li>
+            <li>재정투자사업 타당성 조사</li>
+            <li>공공기관투자사업 타당성 조사</li>
+            <li>상장기업 감사 및 검토</li>
+            <li>해외채권 발행</li>
+            <li>워크아웃 실사 및 인수합병 실사</li>
+            <li>공공기관 경영진단</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>
+      출처: 가천대학교 경영대학 회계세무학과 교수진 페이지,
+      교보문고 인물 정보, KCI 학술지 정보
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      var toggleBtn = document.getElementById("themeToggle");
+      var themeLabel = document.getElementById("themeLabel");
+
+      function updateToggleLabel(theme) {
+        if (theme === "dark") {
+          themeLabel.textContent = "라이트 모드";
+          toggleBtn.setAttribute("aria-label", "라이트 모드로 전환");
+        } else {
+          themeLabel.textContent = "다크 모드";
+          toggleBtn.setAttribute("aria-label", "다크 모드로 전환");
+        }
+      }
+
+      function setTheme(theme) {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+        updateToggleLabel(theme);
+      }
+
+      toggleBtn.addEventListener("click", function () {
+        var current = document.documentElement.getAttribute("data-theme");
+        setTheme(current === "dark" ? "light" : "dark");
+      });
+
+      updateToggleLabel(document.documentElement.getAttribute("data-theme"));
+    })();
+
+    (function () {
+      var root = document.documentElement;
+      var stage = document.getElementById("scrollStage");
+      var ticking = false;
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function setScrollState(progress) {
+        document.body.classList.toggle("is-front", progress < 0.32);
+        document.body.classList.toggle("is-flipped", progress >= 0.32 && progress < 0.62);
+        document.body.classList.toggle("is-expanded", progress >= 0.62 && progress < 0.82);
+        document.body.classList.toggle("is-detail", progress >= 0.82);
+      }
+
+      function updateScrollProgress() {
+        var rect = stage.getBoundingClientRect();
+        var available = stage.offsetHeight - window.innerHeight;
+        var progress = available > 0 ? clamp(-rect.top / available, 0, 1) : 0;
+
+        root.style.setProperty("--scroll-progress", progress.toFixed(4));
+        setScrollState(progress);
+        ticking = false;
+      }
+
+      function requestTick() {
+        if (!ticking) {
+          window.requestAnimationFrame(updateScrollProgress);
+          ticking = true;
+        }
+      }
+
+      window.addEventListener("scroll", requestTick, { passive: true });
+      window.addEventListener("resize", requestTick);
+      updateScrollProgress();
+    })();
+  </script>
+</body>
+</html>
