@@ -283,15 +283,47 @@
     .dot {
       display: block;
       width: 100%;
-      margin-top: 0.12rem;
-      padding: 0.1rem 0.2rem;
-      border-radius: 4px;
-      font-size: 0.58rem;
+      margin-top: 0.15rem;
+      padding: 0.18rem 0.3rem;
+      border-radius: 5px;
+      font-size: 0.68rem;
       font-weight: 700;
       color: #fff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 1.25;
+      word-break: keep-all;
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    .summary-table th,
+    .summary-table td {
+      padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+
+    .summary-table th {
+      background: #fafbfd;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .summary-table tr:hover td {
+      background: #f8fafc;
+    }
+
+    .cat-pill {
+      display: inline-block;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #fff;
     }
 
     .schedule-list {
@@ -508,6 +540,27 @@
       <div class="timeline" id="timeline"></div>
     </article>
 
+    <article class="panel" style="margin-top: 1rem;">
+      <div class="panel-head">
+        <h2>일정 전체 목록</h2>
+        <p>스프레드시트 기준 10개 일정</p>
+      </div>
+      <div style="padding: 0.5rem 0.85rem 1rem; overflow-x: auto;">
+        <table class="summary-table" id="summaryTable">
+          <thead>
+            <tr>
+              <th>일정명</th>
+              <th>시작일</th>
+              <th>종료일</th>
+              <th>분류</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+    </article>
+
     <footer>
       데이터: <a href="https://docs.google.com/spreadsheets/d/1X91WAh_sG2gT1S9fdY5GaCvFpkBlssQh/edit" target="_blank" rel="noopener">2026_학사일정 스프레드시트</a>
     </footer>
@@ -549,12 +602,17 @@
     const state = { filter: "all", month: new Date(2026, 6, 1) };
 
     function parse(s) {
-      const p = s.split("-").map(Number);
+      const p = String(s).split("-").map(Number);
       return new Date(p[0], p[1] - 1, p[2]);
     }
 
+    function todayStr() {
+      const d = new Date();
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
     function fmt(s) {
-      const d = parse(s);
+      const d = typeof s === "string" ? parse(s) : s;
       return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
     }
 
@@ -634,7 +692,7 @@
         el.innerHTML = '<div class="empty">예정된 일정이 없습니다.</div>';
         return;
       }
-      const today = fmt(new Date());
+      const today = todayStr();
       el.innerHTML = upcoming.map(function (ev) {
         return (
           '<div class="next-item">' +
@@ -736,8 +794,23 @@
         '<div class="timeline-scale"><span>일정</span><div class="scale-track">' + scale + '</div></div>' + rows;
     }
 
+    function renderSummary(events) {
+      document.getElementById("summaryBody").innerHTML = events.map(function (ev) {
+        const label = ev.status === "active" ? "진행 중" : ev.status === "upcoming" ? "예정" : "종료";
+        return (
+          "<tr>" +
+            "<td><strong>" + ev.title + "</strong></td>" +
+            "<td>" + ev.start + "</td>" +
+            "<td>" + ev.end + "</td>" +
+            '<td><span class="cat-pill" style="background:' + ev.color + '">' + CATS[ev.cat] + "</span></td>" +
+            "<td>" + label + "</td>" +
+          "</tr>"
+        );
+      }).join("");
+    }
+
     function renderAll() {
-      const today = fmt(new Date());
+      const today = todayStr();
       const events = enrich(today);
       const list = filtered(events);
 
@@ -748,6 +821,7 @@
       renderCalendar(list, today);
       renderList(list);
       renderTimeline(list, today);
+      renderSummary(events);
     }
 
     document.getElementById("categoryFilter").addEventListener("click", function (e) {
@@ -767,7 +841,14 @@
       renderAll();
     });
 
-    renderAll();
+    try {
+      renderAll();
+    } catch (err) {
+      document.body.insertAdjacentHTML("beforeend",
+        '<div style="position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#fee2e2;color:#991b1b;padding:0.75rem 1rem;border-radius:8px;font-size:0.9rem;">일정을 불러오는 중 오류가 발생했습니다. 새로고침해 주세요.</div>'
+      );
+      console.error(err);
+    }
   </script>
 </body>
 </html>
